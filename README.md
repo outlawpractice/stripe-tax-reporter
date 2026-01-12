@@ -147,22 +147,95 @@ The tool uses pagination to handle large numbers of invoices:
 - Automatically paginates through all results
 - Typical runtime: 2-10 seconds depending on invoice count
 
+## How It Works
+
+### Architecture Overview
+
+The tool is built with three main components:
+
+#### 1. **Stripe Client** (`src/stripe/client.rs`)
+Handles all communication with the Stripe API:
+- `fetch_paid_invoices()` - Lists all paid invoices for the quarter with pagination (limit=100)
+- `fetch_customer()` - Retrieves individual customer records with billing address details
+- `fetch_charge()` - Gets charge details to locate the balance transaction
+- `fetch_balance_transaction()` - Retrieves fee information from balance transactions
+
+The client uses async/await with reqwest for efficient API calls and implements pagination automatically.
+
+#### 2. **Report Generator** (`src/report/generator.rs`)
+Processes invoice data and extracts tax-relevant fields:
+- **Customer Name**: Extracted from invoice.customer_name or customer.name
+- **Billing State**: Retrieved from customer.address.state (required for tax compliance)
+- **Users**: Sum of all subscription line item quantities
+- **Licenses**: Sum of subscription line item amounts (in cents, converted to dollars)
+- **Tax**: From invoice.tax field
+- **Total**: Licenses + Tax
+- **Fees**: From balance_transaction.fee field
+- **Date**: Converted from Unix timestamp to MM/DD/YYYY format
+
+Validation is strict - invoices without state information are skipped with a warning.
+
+#### 3. **Report Formatter** (`src/report/formatter.rs`)
+Generates tab-delimited output:
+- Header row with column names
+- Data rows sorted by date (ascending) then customer name (alphabetical)
+- Summary totals row showing quarterly sums
+- Currency formatted to 2 decimal places
+
+### Data Flow
+
+```
+1. Detect Quarter → Calculate start/end dates for previous fiscal quarter
+                  ↓
+2. Convert Dates → Transform to Unix timestamps for API filtering
+                  ↓
+3. Fetch Invoices → GET /v1/invoices?status=paid&created[gte/lte]=...
+                  ↓
+4. For Each Invoice:
+   ├─ Extract charge ID
+   ├─ Fetch charge → GET /v1/charges/{charge_id}
+   ├─ Get balance_transaction ID from charge
+   ├─ Fetch balance_transaction → GET /v1/balance_transactions/{txn_id}
+   ├─ Extract customer ID
+   └─ Fetch customer → GET /v1/customers/{customer_id}
+                  ↓
+5. Process Invoice → Validate state, sum amounts, format dates
+                  ↓
+6. Sort Records → By date ascending, then customer name
+                  ↓
+7. Format Output → Generate TSV with header, data rows, and totals
+                  ↓
+8. Output to stdout → Ready for terminal copy/paste to Excel
+```
+
+### Fee Extraction Details
+
+Stripe processing fees require a multi-step lookup:
+1. Invoice contains a `charge` field (charge ID like `ch_3SniE6H...`)
+2. Fetching the charge returns a `balance_transaction` ID (like `txn_3SniE6H...`)
+3. Fetching the balance transaction returns the `fee` field (in cents)
+4. Fee is converted to dollars (cents ÷ 100) for display
+
+This approach avoids API expand parameter issues and reliably retrieves actual Stripe fees.
+
 ## Limitations & Notes
 
 - **Production Only**: The tool uses production Stripe API keys (sk_live_)
 - **Texas Specific**: Currently configured for Texas tax reporting
 - **State Validation**: Strict - tool errors if any invoice lacks state information
-- **Fees**: Currently shows $0 - fee extraction from balance transactions is planned
+- **Paid Invoices Only**: Only includes invoices with status="paid"
+- **Subscription Lines Only**: Sums only subscription line items, excludes other line types
 - **Multi-User Per Invoice**: Multiple subscription lines per invoice are summed into a single row
+- **API Pagination**: Handles up to 100 invoices per request, automatically paginates through all results
 
 ## Future Enhancements
 
 - Add `--quarter` flag for historical quarters
 - Export to Excel .xlsx format directly
 - Support for multiple states/jurisdictions
-- Fee extraction from Stripe balance transactions
 - Configuration file for customization
 - Refund and credit tracking
+- Command to verify Stripe configuration before running report
 
 ## License
 
