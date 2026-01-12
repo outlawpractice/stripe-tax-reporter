@@ -1,1 +1,24 @@
+# Build artifacts
 /target
+*.pdb
+
+# Environment variables and secrets
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+secrets.json
+
+# IDE files
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Cargo
+Cargo.lock
