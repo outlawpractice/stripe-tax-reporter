@@ -70,10 +70,15 @@ impl ReportGenerator {
     }
 
     pub fn sort_records(&mut self) {
-        // Sort by date ascending, then by customer name
+        // Sort by state (alphabetical), then by date (ascending), then by customer name
         self.records.sort_by(|a, b| {
-            match a.date.cmp(&b.date) {
-                std::cmp::Ordering::Equal => a.customer.cmp(&b.customer),
+            match a.state.cmp(&b.state) {
+                std::cmp::Ordering::Equal => {
+                    match a.date.cmp(&b.date) {
+                        std::cmp::Ordering::Equal => a.customer.cmp(&b.customer),
+                        other => other,
+                    }
+                }
                 other => other,
             }
         });

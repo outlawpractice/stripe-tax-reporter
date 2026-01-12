@@ -1,6 +1,6 @@
 # Stripe Tax Reporter
 
-A CLI tool that generates Texas sales tax reports from Stripe invoices for quarterly tax filing.
+A CLI tool that generates sales tax reports from Stripe invoices for quarterly tax filing.
 
 ## Features
 
@@ -50,14 +50,23 @@ Run the tool to generate the report for the previous fiscal quarter:
 stripe-tax-reporter
 ```
 
-The tool will output tab-delimited data to stdout:
+The tool will output tab-delimited data to stdout, grouped by state:
 
 ```
-Date	Customer	Users	State	Licenses	Tax	Total	Fees
-10/15/2025	Margaglione Law PLLC	7	TX	280.00	22.40	302.40	9.42
-11/03/2025	Smith & Associates	3	TX	150.00	12.00	162.00	5.01
-12/01/2025	Johnson Legal PC	5	TX	200.00	16.00	216.00	6.88
-TOTAL				630.00	50.40	680.40	21.31
+===== CALIFORNIA (CA) =====
+Date	Customer	Users	Licenses	Tax	Total	Fees
+10/20/2025	Acme Corp	5	200.00	17.00	217.00	6.90
+11/15/2025	Widget Inc	2	80.00	6.80	86.80	2.75
+Subtotal			280.00	23.80	303.80	9.65
+
+===== TEXAS (TX) =====
+Date	Customer	Users	Licenses	Tax	Total	Fees
+10/15/2025	Margaglione Law PLLC	7	280.00	22.40	302.40	9.42
+11/03/2025	Smith & Associates	3	150.00	12.00	162.00	5.01
+12/01/2025	Johnson Legal PC	5	200.00	16.00	216.00	6.88
+Subtotal			630.00	50.40	680.40	21.31
+
+GRAND TOTAL			910.00	74.20	984.20	40.96
 ```
 
 ### Copy to Excel
@@ -75,13 +84,12 @@ TOTAL				630.00	50.40	680.40	21.31
 | **Date** | Invoice payment date (MM/DD/YYYY format) |
 | **Customer** | Customer business name from Stripe |
 | **Users** | Total subscription quantity/licensed users |
-| **State** | Two-letter state code (TX) |
 | **Licenses** | Subscription revenue (excluding tax) |
 | **Tax** | Sales tax amount |
 | **Total** | Licenses + Tax |
 | **Fees** | Stripe processing fees |
 
-The last row shows quarterly totals for Licenses, Tax, Total, and Fees.
+**Note:** The state is shown in the section header (e.g., "===== TEXAS (TX) =====") rather than as a column. Each state gets its own table section with a subtotal row, followed by a grand total across all states.
 
 ## Quarterly Selection
 
@@ -176,10 +184,13 @@ Processes invoice data and extracts tax-relevant fields:
 Validation is strict - invoices without state information are skipped with a warning.
 
 #### 3. **Report Formatter** (`src/report/formatter.rs`)
-Generates tab-delimited output:
-- Header row with column names
-- Data rows sorted by date (ascending) then customer name (alphabetical)
-- Summary totals row showing quarterly sums
+Generates tab-delimited output grouped by state:
+- Separate section for each state (alphabetically ordered)
+- State header showing the state code (e.g., "===== TEXAS (TX) =====")
+- Column headers: Date, Customer, Users, Licenses, Tax, Total, Fees (NO State column)
+- Data rows sorted by date (ascending) then customer name (alphabetical) within each state
+- Per-state subtotal row showing that state's totals
+- Grand total row showing sums across all states
 - Currency formatted to 2 decimal places
 
 ### Data Flow
@@ -201,9 +212,9 @@ Generates tab-delimited output:
                   ↓
 5. Process Invoice → Validate state, sum amounts, format dates
                   ↓
-6. Sort Records → By date ascending, then customer name
+6. Sort Records → By state (alphabetically), then date (ascending), then customer name
                   ↓
-7. Format Output → Generate TSV with header, data rows, and totals
+7. Format Output → Group by state, generate per-state sections with subtotals and grand total
                   ↓
 8. Output to stdout → Ready for terminal copy/paste to Excel
 ```
@@ -221,8 +232,8 @@ This approach avoids API expand parameter issues and reliably retrieves actual S
 ## Limitations & Notes
 
 - **Production Only**: The tool uses production Stripe API keys (sk_live_)
-- **Texas Specific**: Currently configured for Texas tax reporting
-- **State Validation**: Strict - tool errors if any invoice lacks state information
+- **Multi-State Supported**: Automatically groups invoices by state with per-state subtotals
+- **State Validation**: Strict - tool requires invoices to have billing state information (skips invoices without state)
 - **Paid Invoices Only**: Only includes invoices with status="paid"
 - **Subscription Lines Only**: Sums only subscription line items, excludes other line types
 - **Multi-User Per Invoice**: Multiple subscription lines per invoice are summed into a single row
@@ -232,10 +243,10 @@ This approach avoids API expand parameter issues and reliably retrieves actual S
 
 - Add `--quarter` flag for historical quarters
 - Export to Excel .xlsx format directly
-- Support for multiple states/jurisdictions
 - Configuration file for customization
 - Refund and credit tracking
 - Command to verify Stripe configuration before running report
+- Support for tax rates by state/jurisdiction
 
 ## License
 

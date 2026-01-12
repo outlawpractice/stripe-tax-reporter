@@ -114,14 +114,11 @@ async fn main() -> Result<()> {
 
             eprintln!("Processed {} invoices, skipped {}", processed, skipped);
 
-            // Sort records
+            // Sort records (by state, then date, then customer)
             generator.sort_records();
 
-            // Calculate totals
-            let totals = generator.calculate_totals();
-
-            // Format and output as TSV
-            let tsv_output = format_as_tsv(generator.get_records(), totals);
+            // Format and output as TSV (formatter calculates per-state subtotals internally)
+            let tsv_output = format_as_tsv(generator.get_records());
             println!("{}", tsv_output);
 
             Ok(())
