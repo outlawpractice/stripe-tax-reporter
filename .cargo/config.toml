@@ -9,3 +9,12 @@ lto = true
 codegen-units = 1
 # Strip debug symbols to reduce binary size
 strip = true
+
+# musl cross-compilation configuration for Linux static builds
+[target.x86_64-unknown-linux-musl]
+linker = "x86_64-linux-musl-gcc"
+ar = "x86_64-linux-musl-ar"
+
+# Windows cross-compilation configuration
+[target.x86_64-pc-windows-gnu]
+linker = "x86_64-w64-mingw32-gcc"
