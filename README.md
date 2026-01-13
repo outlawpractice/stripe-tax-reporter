@@ -28,22 +28,29 @@ Pre-built binaries are available for download from the [GitHub releases page](ht
 
 Download the appropriate binary for your platform, make it executable (on macOS/Linux), and run it:
 
-**macOS:**
+**macOS (Intel):**
 ```bash
-curl -L https://github.com/outlawpractice/stripe-tax-reporter/releases/download/v1.0.0/stripe-tax-reporter-macos-x86_64 -o stripe-tax-reporter
+curl -L https://github.com/outlawpractice/stripe-tax-reporter/releases/download/v1.0.1/stripe-tax-reporter-macos-x86_64 -o stripe-tax-reporter
+chmod +x stripe-tax-reporter
+./stripe-tax-reporter
+```
+
+**macOS (Apple Silicon):**
+```bash
+curl -L https://github.com/outlawpractice/stripe-tax-reporter/releases/download/v1.0.1/stripe-tax-reporter-macos-aarch64 -o stripe-tax-reporter
 chmod +x stripe-tax-reporter
 ./stripe-tax-reporter
 ```
 
 **Linux:**
 ```bash
-wget https://github.com/outlawpractice/stripe-tax-reporter/releases/download/v1.0.0/stripe-tax-reporter-linux-x86_64
+wget https://github.com/outlawpractice/stripe-tax-reporter/releases/download/v1.0.1/stripe-tax-reporter-linux-x86_64
 chmod +x stripe-tax-reporter-linux-x86_64
 ./stripe-tax-reporter-linux-x86_64
 ```
 
 **Windows:**
-Download `stripe-tax-reporter-windows-x86_64.exe` from the releases page and run it in PowerShell or Command Prompt.
+Download [`stripe-tax-reporter-windows-x86_64.exe`](https://github.com/outlawpractice/stripe-tax-reporter/releases/download/v1.0.1/stripe-tax-reporter-windows-x86_64.exe) and run it in PowerShell or Command Prompt.
 
 ### Option 2: Build from Source
 

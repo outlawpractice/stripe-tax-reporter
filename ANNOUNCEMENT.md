@@ -1,8 +1,23 @@
 # Stripe Tax Reporter - Release Announcements
 
-## 📢 GitHub Release
-✅ **COMPLETED** - v1.0.0 released with comprehensive release notes
+## 📢 GitHub Releases
+✅ **v1.0.0** - Initial release with comprehensive feature set
 - URL: https://github.com/outlawpractice/stripe-tax-reporter/releases/tag/v1.0.0
+
+✅ **v1.0.1** - Pre-built binaries for all platforms (LATEST)
+- URL: https://github.com/outlawpractice/stripe-tax-reporter/releases/tag/v1.0.1
+
+### Pre-Built Binary Downloads (v1.0.1)
+
+**macOS:**
+- [stripe-tax-reporter-macos-x86_64](https://github.com/outlawpractice/stripe-tax-reporter/releases/download/v1.0.1/stripe-tax-reporter-macos-x86_64) - Intel (x86_64)
+- [stripe-tax-reporter-macos-aarch64](https://github.com/outlawpractice/stripe-tax-reporter/releases/download/v1.0.1/stripe-tax-reporter-macos-aarch64) - Apple Silicon
+
+**Linux:**
+- [stripe-tax-reporter-linux-x86_64](https://github.com/outlawpractice/stripe-tax-reporter/releases/download/v1.0.1/stripe-tax-reporter-linux-x86_64) - x86_64
+
+**Windows:**
+- [stripe-tax-reporter-windows-x86_64.exe](https://github.com/outlawpractice/stripe-tax-reporter/releases/download/v1.0.1/stripe-tax-reporter-windows-x86_64.exe) - x86_64
 
 ---
 
@@ -57,6 +72,16 @@ export STRIPE_PROD_API_KEY="sk_live_..."
 stripe-tax-reporter
 ```
 
+**Quick Install (no compilation needed):**
+
+Pre-built binaries are available for macOS, Linux, and Windows:
+- macOS (Intel): [stripe-tax-reporter-macos-x86_64](https://github.com/outlawpractice/stripe-tax-reporter/releases/download/v1.0.1/stripe-tax-reporter-macos-x86_64)
+- macOS (Apple Silicon): [stripe-tax-reporter-macos-aarch64](https://github.com/outlawpractice/stripe-tax-reporter/releases/download/v1.0.1/stripe-tax-reporter-macos-aarch64)
+- Linux: [stripe-tax-reporter-linux-x86_64](https://github.com/outlawpractice/stripe-tax-reporter/releases/download/v1.0.1/stripe-tax-reporter-linux-x86_64)
+- Windows: [stripe-tax-reporter-windows-x86_64.exe](https://github.com/outlawpractice/stripe-tax-reporter/releases/download/v1.0.1/stripe-tax-reporter-windows-x86_64.exe)
+
+Just download, make executable (macOS/Linux), and run!
+
 The tool is written in Rust for speed and reliability. It uses the Stripe API to fetch invoices, customers, and balance transactions, then generates formatted reports automatically.
 
 ### Use Cases
@@ -85,16 +110,17 @@ Hope this helps other Stripe users! Happy to answer questions or consider featur
 
 ## 🐦 Twitter/X Post
 
-🎉 We just released Stripe Tax Reporter - an open-source CLI tool for generating multi-state sales tax reports from Stripe invoices.
+🎉 We just released Stripe Tax Reporter v1.0.1 - an open-source CLI tool for multi-state sales tax reporting from Stripe invoices.
 
+✅ Pre-built binaries (macOS, Linux, Windows)
 ✅ Automatic state grouping
 ✅ Includes Stripe fees
 ✅ Excel-ready output
 ✅ Free & MIT licensed
 
-Perfect for quarterly tax filing!
+Download now: https://github.com/outlawpractice/stripe-tax-reporter/releases/tag/v1.0.1
 
-https://github.com/outlawpractice/stripe-tax-reporter
+Perfect for quarterly tax filing! No compilation needed.
 
 #OpenSource #Stripe #SaaS #TaxReporting
 
@@ -112,12 +138,16 @@ So we built a CLI tool that:
 • Includes Stripe processing fees
 • Outputs Excel-ready format
 • Detects the previous fiscal quarter automatically
+• Available as pre-built binaries (no compilation needed!)
 
 We figured other businesses might find it useful, so we're releasing it as open source under the MIT License.
 
 The tool is written in Rust for performance and uses the Stripe API to fetch invoices, customers, and balance transactions. It handles all the edge cases we encountered - multiple address sources, pagination, fee extraction from balance transactions, etc.
 
+Best part? Pre-built binaries are available for macOS (Intel & Apple Silicon), Linux, and Windows. Just download and run—no need for Rust or compilation.
+
 GitHub: https://github.com/outlawpractice/stripe-tax-reporter
+Downloads: https://github.com/outlawpractice/stripe-tax-reporter/releases
 
 Hope this helps other businesses streamline their tax reporting! 🚀
 
