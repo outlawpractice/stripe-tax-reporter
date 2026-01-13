@@ -16,13 +16,13 @@ A CLI tool that generates sales tax reports from Stripe invoices for quarterly t
 
 - Stripe production API key (not test)
 
-### Option 1: Download Pre-built Binary (macOS)
+### Option 1: Download Pre-built Binary (All Platforms)
 
-Pre-built binaries are available for macOS from the [GitHub releases page](https://github.com/outlawpractice/stripe-tax-reporter/releases).
+Pre-built binaries are available for macOS, Linux, and Windows from the [GitHub releases page](https://github.com/outlawpractice/stripe-tax-reporter/releases/tag/v1.0.2).
 
 **macOS (Intel):**
 ```bash
-curl -L https://github.com/outlawpractice/stripe-tax-reporter/releases/download/v1.0.1/stripe-tax-reporter-macos-x86_64 -o stripe-tax-reporter
+curl -L https://github.com/outlawpractice/stripe-tax-reporter/releases/download/v1.0.2/stripe-tax-reporter-macos-x86_64 -o stripe-tax-reporter
 chmod +x stripe-tax-reporter
 export STRIPE_PROD_API_KEY="sk_live_..."
 ./stripe-tax-reporter
@@ -30,19 +30,33 @@ export STRIPE_PROD_API_KEY="sk_live_..."
 
 **macOS (Apple Silicon):**
 ```bash
-curl -L https://github.com/outlawpractice/stripe-tax-reporter/releases/download/v1.0.1/stripe-tax-reporter-macos-aarch64 -o stripe-tax-reporter
+curl -L https://github.com/outlawpractice/stripe-tax-reporter/releases/download/v1.0.2/stripe-tax-reporter-macos-aarch64 -o stripe-tax-reporter
 chmod +x stripe-tax-reporter
 export STRIPE_PROD_API_KEY="sk_live_..."
 ./stripe-tax-reporter
 ```
 
-**Linux and Windows users:** See Option 2 (Build from Source) or Option 3 (Cargo Install) below.
+**Linux (x86_64):**
+```bash
+curl -L https://github.com/outlawpractice/stripe-tax-reporter/releases/download/v1.0.2/stripe-tax-reporter-linux-x86_64 -o stripe-tax-reporter
+chmod +x stripe-tax-reporter
+export STRIPE_PROD_API_KEY="sk_live_..."
+./stripe-tax-reporter
+```
+
+**Windows (x86_64):**
+```bash
+curl -L https://github.com/outlawpractice/stripe-tax-reporter/releases/download/v1.0.2/stripe-tax-reporter-windows-x86_64.exe -o stripe-tax-reporter.exe
+export STRIPE_PROD_API_KEY="sk_live_..."
+.\stripe-tax-reporter.exe
+```
+
+Alternatively, use Option 2 (Build from Source) or Option 3 (Cargo Install) below.
 
 ### Option 2: Build from Source
 
 If you prefer to build from source, you'll need:
 - Rust 1.70 or later
-- OpenSSL development libraries
 
 **Build:**
 ```bash
@@ -149,7 +163,12 @@ Your API key is invalid or expired. Verify it's correct and has the necessary pe
 
 ### "Customer state/billing address not found"
 
-The tool uses strict validation - it requires all invoices to have a customer billing address with state information. Invoices without state data are skipped with a warning. Update your customer profiles in Stripe to include billing addresses.
+The tool requires state information from at least one of three sources:
+1. **Customer profile address** - Update your customer's billing address in Stripe
+2. **Credit card billing address** - The payment method's billing address
+3. **Invoice address** - The address stored on the invoice itself
+
+Invoices without state data from any of these sources are skipped with a warning. Make sure your customers have at least one source with complete state information.
 
 ### No invoices retrieved
 
@@ -163,13 +182,13 @@ Make sure:
 The report includes only:
 - **Paid invoices** (status = "paid") with completed payment
 - **Subscription charges** (not invoicing items or fees)
-- **Texas addresses** (due to state validation requirement)
+- **Invoices with state information** (from customer address, billing address, or invoice address)
 
 The report **excludes**:
 - Draft invoices
 - Unpaid invoices
 - Credits and refunds
-- Invoices without customer address information
+- Invoices without state information from any of the three sources
 
 ## Output Format
 
@@ -207,7 +226,7 @@ The client uses async/await with reqwest for efficient API calls and implements 
 #### 2. **Report Generator** (`src/report/generator.rs`)
 Processes invoice data and extracts tax-relevant fields:
 - **Customer Name**: Extracted from invoice.customer_name or customer.name
-- **Billing State**: Retrieved from customer.address.state (required for tax compliance)
+- **Billing State**: Extracted using three-level fallback (see "State Extraction with Three-Level Fallback" below)
 - **Users**: Sum of all subscription line item quantities
 - **Licenses**: Sum of subscription line item amounts (in cents, converted to dollars)
 - **Tax**: From invoice.tax field
@@ -215,7 +234,7 @@ Processes invoice data and extracts tax-relevant fields:
 - **Fees**: From balance_transaction.fee field
 - **Date**: Converted from Unix timestamp to MM/DD/YYYY format
 
-Validation is strict - invoices without state information are skipped with a warning. Uses a three-level fallback:
+Validation is strict - invoices without state information from any source are skipped with a warning. Uses a three-level fallback:
   1. Customer profile address (if available)
   2. Credit card billing address (if available)
   3. Invoice customer address (if available)
