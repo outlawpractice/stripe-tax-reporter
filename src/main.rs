@@ -81,23 +81,31 @@ async fn main() -> Result<()> {
                 // Fetch customer details
                 match client.fetch_customer(&customer_id).await {
                     Ok(customer) => {
-                        // Try to fetch balance_transaction for fees if charge exists
+                        let mut charge_data = None;
                         let mut balance_transaction = None;
+
                         if let Some(charge_value) = &invoice.charge {
                             if let serde_json::Value::String(charge_id) = charge_value {
-                                // Fetch the charge to get its balance_transaction ID
+                                // Fetch the charge to get its balance_transaction ID and billing address
                                 if let Ok(charge) = client.fetch_charge(charge_id).await {
-                                    // Now fetch the balance_transaction if we have its ID
+                                    // Extract balance_transaction for fees
                                     if let Some(balance_tx_id) = &charge.balance_transaction {
                                         if let Ok(bt) = client.fetch_balance_transaction(balance_tx_id).await {
                                             balance_transaction = Some(bt);
                                         }
                                     }
+                                    // Store charge for state fallback
+                                    charge_data = Some(charge);
                                 }
                             }
                         }
 
-                        match generator.process_invoice_with_customer(invoice.clone(), Some(&customer), balance_transaction.as_ref()) {
+                        match generator.process_invoice_with_customer(
+                            invoice.clone(),
+                            Some(&customer),
+                            charge_data.as_ref(),
+                            balance_transaction.as_ref()
+                        ) {
                             Ok(_) => processed += 1,
                             Err(e) => {
                                 eprintln!("Warning: Skipping invoice {}: {}", invoice.id, e);

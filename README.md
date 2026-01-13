@@ -181,7 +181,12 @@ Processes invoice data and extracts tax-relevant fields:
 - **Fees**: From balance_transaction.fee field
 - **Date**: Converted from Unix timestamp to MM/DD/YYYY format
 
-Validation is strict - invoices without state information are skipped with a warning.
+Validation is strict - invoices without state information are skipped with a warning. Uses a three-level fallback:
+  1. Customer profile address (if available)
+  2. Credit card billing address (if available)
+  3. Invoice customer address (if available)
+
+If all three sources lack state information, the invoice is skipped.
 
 #### 3. **Report Formatter** (`src/report/formatter.rs`)
 Generates tab-delimited output grouped by state:
@@ -219,6 +224,26 @@ Generates tab-delimited output grouped by state:
 8. Output to stdout → Ready for terminal copy/paste to Excel
 ```
 
+### State Extraction with Three-Level Fallback
+
+The tool uses a three-level fallback to ensure maximum data coverage when extracting customer state:
+
+1. **Customer Profile Address** (Primary Source)
+   - Extracted from the Stripe customer object: `customer.address.state`
+   - Used when customer has updated their billing address in Stripe
+
+2. **Credit Card Billing Address** (Secondary Fallback)
+   - Extracted from the payment charge object: `charge.billing_details.address.state`
+   - Used when the customer profile lacks an address but the credit card has billing details
+
+3. **Invoice Customer Address** (Tertiary Fallback)
+   - Extracted from the invoice object: `invoice.customer_address.state`
+   - Used as final fallback for invoices with address information
+
+If all three sources lack state information, the invoice is skipped with a warning and counted in the "skipped" total.
+
+This three-level approach maximizes the number of invoices that can be reported while maintaining strict validation that every reported invoice has verified state information for tax compliance.
+
 ### Fee Extraction Details
 
 Stripe processing fees require a multi-step lookup:
@@ -233,7 +258,7 @@ This approach avoids API expand parameter issues and reliably retrieves actual S
 
 - **Production Only**: The tool uses production Stripe API keys (sk_live_)
 - **Multi-State Supported**: Automatically groups invoices by state with per-state subtotals
-- **State Validation**: Strict - tool requires invoices to have billing state information (skips invoices without state)
+- **State Validation**: Strict - tool requires invoices to have billing state information from one of three sources: customer address, credit card billing address, or invoice address (skips invoices without state)
 - **Paid Invoices Only**: Only includes invoices with status="paid"
 - **Subscription Lines Only**: Sums only subscription line items, excludes other line types
 - **Multi-User Per Invoice**: Multiple subscription lines per invoice are summed into a single row

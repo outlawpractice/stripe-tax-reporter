@@ -93,11 +93,19 @@ pub struct Address {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BillingDetails {
+    #[serde(default)]
+    pub address: Option<Address>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Charge {
     #[serde(default)]
     pub id: String,
     #[serde(default)]
     pub balance_transaction: Option<String>,
+    #[serde(default)]
+    pub billing_details: Option<BillingDetails>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

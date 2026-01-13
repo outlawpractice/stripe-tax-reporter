@@ -15,20 +15,18 @@ impl ReportGenerator {
     }
 
     /// Convert Stripe invoice data to an InvoiceRecord
-    /// This version takes customer and balance_transaction data separately if already fetched
+    /// This version takes customer and charge data separately if already fetched
+    /// Uses three-level fallback for state extraction: customer address → charge billing address → invoice address
     pub fn process_invoice_with_customer(
         &mut self,
         invoice: StripeInvoice,
         customer: Option<&crate::stripe::client::Customer>,
+        charge: Option<&crate::stripe::client::Charge>,
         balance_transaction: Option<&crate::stripe::client::BalanceTransaction>,
     ) -> Result<()> {
         let date = format_invoice_date(invoice.paid_at.unwrap_or(invoice.created))?;
         let customer_name = extract_customer_name(&invoice)?;
-        let state = if let Some(cust) = customer {
-            extract_state_from_customer(cust, &invoice)?
-        } else {
-            extract_state(&invoice)?
-        };
+        let state = extract_state_with_fallbacks(customer, charge, &invoice)?;
 
         // Sum subscription quantities
         let users = sum_subscription_quantities(&invoice)?;
@@ -66,7 +64,7 @@ impl ReportGenerator {
 
     /// Legacy method for backward compatibility
     pub fn process_invoice(&mut self, invoice: StripeInvoice) -> Result<()> {
-        self.process_invoice_with_customer(invoice, None, None)
+        self.process_invoice_with_customer(invoice, None, None, None)
     }
 
     pub fn sort_records(&mut self) {
@@ -168,6 +166,56 @@ fn extract_state_from_customer(customer: &crate::stripe::client::Customer, invoi
     ))
 }
 
+/// Extract state with three-level fallback:
+/// 1. Customer address (if customer provided)
+/// 2. Credit card billing address (if charge provided)
+/// 3. Invoice customer address (if present)
+/// 4. Error if all three are missing
+fn extract_state_with_fallbacks(
+    customer: Option<&crate::stripe::client::Customer>,
+    charge: Option<&crate::stripe::client::Charge>,
+    invoice: &StripeInvoice,
+) -> Result<String> {
+    // Try customer address first
+    if let Some(cust) = customer {
+        if let Some(address) = &cust.address {
+            if let Some(state) = &address.state {
+                if !state.is_empty() {
+                    return Ok(state.to_uppercase());
+                }
+            }
+        }
+    }
+
+    // Try credit card billing address second
+    if let Some(chg) = charge {
+        if let Some(billing_details) = &chg.billing_details {
+            if let Some(address) = &billing_details.address {
+                if let Some(state) = &address.state {
+                    if !state.is_empty() {
+                        return Ok(state.to_uppercase());
+                    }
+                }
+            }
+        }
+    }
+
+    // Try invoice customer address third
+    if let Some(address) = &invoice.customer_address {
+        if let Some(state) = &address.state {
+            if !state.is_empty() {
+                return Ok(state.to_uppercase());
+            }
+        }
+    }
+
+    // All three failed - error with comprehensive message
+    Err(anyhow!(
+        "Invoice {}: No state found in customer address, credit card billing address, or invoice address (strict validation required)",
+        invoice.id
+    ))
+}
+
 
 /// Sum all subscription line item quantities
 fn sum_subscription_quantities(invoice: &StripeInvoice) -> Result<u32> {
@@ -196,6 +244,7 @@ fn sum_license_amounts(invoice: &StripeInvoice) -> Result<i64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::stripe::client::{Address, Customer, Charge, BillingDetails};
 
     #[test]
     fn test_format_date() {
@@ -209,5 +258,214 @@ mod tests {
         let generator = ReportGenerator::new();
         let totals = generator.calculate_totals();
         assert_eq!(totals, (0, 0, 0, 0));
+    }
+
+    #[test]
+    fn test_state_fallback_to_customer_address() {
+        // Create a minimal invoice with no customer address
+        let invoice = StripeInvoice {
+            id: "in_test1".to_string(),
+            customer: serde_json::json!("cus_123"),
+            customer_name: Some("Test Company".to_string()),
+            customer_address: None,
+            status: "paid".to_string(),
+            created: 1704067200,
+            paid_at: Some(1704067200),
+            amount_due: 50000,
+            amount_paid: 50000,
+            tax: Some(4000),
+            lines: crate::stripe::client::LineItems { data: vec![] },
+            charge: None,
+        };
+
+        // Create a customer with address
+        let customer = Customer {
+            id: "cus_123".to_string(),
+            name: Some("Test Company".to_string()),
+            address: Some(Address {
+                city: Some("Austin".to_string()),
+                country: Some("US".to_string()),
+                line1: Some("123 Main St".to_string()),
+                line2: None,
+                postal_code: Some("78701".to_string()),
+                state: Some("TX".to_string()),
+            }),
+        };
+
+        let state = extract_state_with_fallbacks(Some(&customer), None, &invoice).unwrap();
+        assert_eq!(state, "TX");
+    }
+
+    #[test]
+    fn test_state_fallback_to_billing_address() {
+        // Create a minimal invoice with no customer or invoice address
+        let invoice = StripeInvoice {
+            id: "in_test2".to_string(),
+            customer: serde_json::json!("cus_456"),
+            customer_name: Some("Another Company".to_string()),
+            customer_address: None,
+            status: "paid".to_string(),
+            created: 1704067200,
+            paid_at: Some(1704067200),
+            amount_due: 50000,
+            amount_paid: 50000,
+            tax: Some(4000),
+            lines: crate::stripe::client::LineItems { data: vec![] },
+            charge: None,
+        };
+
+        // Create a customer with no address
+        let customer = Customer {
+            id: "cus_456".to_string(),
+            name: Some("Another Company".to_string()),
+            address: None,
+        };
+
+        // Create a charge with billing details
+        let charge = Charge {
+            id: "ch_123".to_string(),
+            balance_transaction: None,
+            billing_details: Some(BillingDetails {
+                address: Some(Address {
+                    city: Some("San Francisco".to_string()),
+                    country: Some("US".to_string()),
+                    line1: Some("456 Market St".to_string()),
+                    line2: None,
+                    postal_code: Some("94102".to_string()),
+                    state: Some("CA".to_string()),
+                }),
+            }),
+        };
+
+        let state = extract_state_with_fallbacks(Some(&customer), Some(&charge), &invoice).unwrap();
+        assert_eq!(state, "CA");
+    }
+
+    #[test]
+    fn test_state_fallback_to_invoice_address() {
+        // Create an invoice with customer_address
+        let invoice = StripeInvoice {
+            id: "in_test3".to_string(),
+            customer: serde_json::json!("cus_789"),
+            customer_name: Some("Third Company".to_string()),
+            customer_address: Some(Address {
+                city: Some("New York".to_string()),
+                country: Some("US".to_string()),
+                line1: Some("789 Broadway".to_string()),
+                line2: None,
+                postal_code: Some("10003".to_string()),
+                state: Some("NY".to_string()),
+            }),
+            status: "paid".to_string(),
+            created: 1704067200,
+            paid_at: Some(1704067200),
+            amount_due: 50000,
+            amount_paid: 50000,
+            tax: Some(4000),
+            lines: crate::stripe::client::LineItems { data: vec![] },
+            charge: None,
+        };
+
+        // Create a customer with no address
+        let customer = Customer {
+            id: "cus_789".to_string(),
+            name: Some("Third Company".to_string()),
+            address: None,
+        };
+
+        // No charge with billing details
+        let state = extract_state_with_fallbacks(Some(&customer), None, &invoice).unwrap();
+        assert_eq!(state, "NY");
+    }
+
+    #[test]
+    fn test_state_fallback_priority_customer_over_charge() {
+        // When customer has address, it should take precedence over charge billing address
+        let invoice = StripeInvoice {
+            id: "in_test4".to_string(),
+            customer: serde_json::json!("cus_priority"),
+            customer_name: Some("Priority Test".to_string()),
+            customer_address: None,
+            status: "paid".to_string(),
+            created: 1704067200,
+            paid_at: Some(1704067200),
+            amount_due: 50000,
+            amount_paid: 50000,
+            tax: Some(4000),
+            lines: crate::stripe::client::LineItems { data: vec![] },
+            charge: None,
+        };
+
+        // Customer with TX address
+        let customer = Customer {
+            id: "cus_priority".to_string(),
+            name: Some("Priority Test".to_string()),
+            address: Some(Address {
+                city: Some("Houston".to_string()),
+                country: Some("US".to_string()),
+                line1: Some("100 Main".to_string()),
+                line2: None,
+                postal_code: Some("77001".to_string()),
+                state: Some("TX".to_string()),
+            }),
+        };
+
+        // Charge with CA billing address
+        let charge = Charge {
+            id: "ch_priority".to_string(),
+            balance_transaction: None,
+            billing_details: Some(BillingDetails {
+                address: Some(Address {
+                    city: Some("Los Angeles".to_string()),
+                    country: Some("US".to_string()),
+                    line1: Some("200 Market".to_string()),
+                    line2: None,
+                    postal_code: Some("90001".to_string()),
+                    state: Some("CA".to_string()),
+                }),
+            }),
+        };
+
+        // Should return TX (customer address) not CA (charge billing address)
+        let state = extract_state_with_fallbacks(Some(&customer), Some(&charge), &invoice).unwrap();
+        assert_eq!(state, "TX");
+    }
+
+    #[test]
+    fn test_state_fallback_all_missing_error() {
+        // Create an invoice with no address info anywhere
+        let invoice = StripeInvoice {
+            id: "in_test_error".to_string(),
+            customer: serde_json::json!("cus_none"),
+            customer_name: Some("No Address Company".to_string()),
+            customer_address: None,
+            status: "paid".to_string(),
+            created: 1704067200,
+            paid_at: Some(1704067200),
+            amount_due: 50000,
+            amount_paid: 50000,
+            tax: Some(4000),
+            lines: crate::stripe::client::LineItems { data: vec![] },
+            charge: None,
+        };
+
+        // Customer with no address
+        let customer = Customer {
+            id: "cus_none".to_string(),
+            name: Some("No Address Company".to_string()),
+            address: None,
+        };
+
+        // Charge with no billing details
+        let charge = Charge {
+            id: "ch_none".to_string(),
+            balance_transaction: None,
+            billing_details: None,
+        };
+
+        // Should return error
+        let result = extract_state_with_fallbacks(Some(&customer), Some(&charge), &invoice);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("No state found"));
     }
 }
