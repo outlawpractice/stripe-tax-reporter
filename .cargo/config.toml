@@ -1,0 +1,11 @@
+# Cargo configuration for optimized builds
+
+[profile.release]
+# Optimize for speed
+opt-level = 3
+# Enable link-time optimization
+lto = true
+# Reduce binary size by enabling code generation units
+codegen-units = 1
+# Strip debug symbols to reduce binary size
+strip = true

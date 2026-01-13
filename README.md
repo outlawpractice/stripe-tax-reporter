@@ -14,17 +14,58 @@ A CLI tool that generates sales tax reports from Stripe invoices for quarterly t
 
 ### Prerequisites
 
-- Rust 1.70 or later
 - Stripe production API key (not test)
 
-### Build from Source
+### Option 1: Download Pre-built Binary (Recommended)
 
+Pre-built binaries are available for download from the [GitHub releases page](https://github.com/outlawpractice/stripe-tax-reporter/releases).
+
+**Supported platforms:**
+- macOS (Intel x86_64)
+- macOS (Apple Silicon aarch64)
+- Linux (x86_64)
+- Windows (x86_64)
+
+Download the appropriate binary for your platform, make it executable (on macOS/Linux), and run it:
+
+**macOS:**
 ```bash
-cd ~/projects/stripe-tax-reporter
+curl -L https://github.com/outlawpractice/stripe-tax-reporter/releases/download/v1.0.0/stripe-tax-reporter-macos-x86_64 -o stripe-tax-reporter
+chmod +x stripe-tax-reporter
+./stripe-tax-reporter
+```
+
+**Linux:**
+```bash
+wget https://github.com/outlawpractice/stripe-tax-reporter/releases/download/v1.0.0/stripe-tax-reporter-linux-x86_64
+chmod +x stripe-tax-reporter-linux-x86_64
+./stripe-tax-reporter-linux-x86_64
+```
+
+**Windows:**
+Download `stripe-tax-reporter-windows-x86_64.exe` from the releases page and run it in PowerShell or Command Prompt.
+
+### Option 2: Build from Source
+
+If you prefer to build from source, you'll need:
+- Rust 1.70 or later
+- OpenSSL development libraries
+
+**Build:**
+```bash
+git clone https://github.com/outlawpractice/stripe-tax-reporter.git
+cd stripe-tax-reporter
 cargo build --release
 ```
 
 The binary will be at `target/release/stripe-tax-reporter`.
+
+### Option 3: Install with Cargo
+
+If you have Rust installed:
+```bash
+cargo install --git https://github.com/outlawpractice/stripe-tax-reporter.git
+```
 
 ## Usage
 
