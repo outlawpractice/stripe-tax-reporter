@@ -16,22 +16,15 @@ A CLI tool that generates sales tax reports from Stripe invoices for quarterly t
 
 - Stripe production API key (not test)
 
-### Option 1: Download Pre-built Binary (Recommended)
+### Option 1: Download Pre-built Binary (macOS)
 
-Pre-built binaries are available for download from the [GitHub releases page](https://github.com/outlawpractice/stripe-tax-reporter/releases).
-
-**Supported platforms:**
-- macOS (Intel x86_64)
-- macOS (Apple Silicon aarch64)
-- Linux (x86_64)
-- Windows (x86_64)
-
-Download the appropriate binary for your platform, make it executable (on macOS/Linux), and run it:
+Pre-built binaries are available for macOS from the [GitHub releases page](https://github.com/outlawpractice/stripe-tax-reporter/releases).
 
 **macOS (Intel):**
 ```bash
 curl -L https://github.com/outlawpractice/stripe-tax-reporter/releases/download/v1.0.1/stripe-tax-reporter-macos-x86_64 -o stripe-tax-reporter
 chmod +x stripe-tax-reporter
+export STRIPE_PROD_API_KEY="sk_live_..."
 ./stripe-tax-reporter
 ```
 
@@ -39,18 +32,11 @@ chmod +x stripe-tax-reporter
 ```bash
 curl -L https://github.com/outlawpractice/stripe-tax-reporter/releases/download/v1.0.1/stripe-tax-reporter-macos-aarch64 -o stripe-tax-reporter
 chmod +x stripe-tax-reporter
+export STRIPE_PROD_API_KEY="sk_live_..."
 ./stripe-tax-reporter
 ```
 
-**Linux:**
-```bash
-wget https://github.com/outlawpractice/stripe-tax-reporter/releases/download/v1.0.1/stripe-tax-reporter-linux-x86_64
-chmod +x stripe-tax-reporter-linux-x86_64
-./stripe-tax-reporter-linux-x86_64
-```
-
-**Windows:**
-Download [`stripe-tax-reporter-windows-x86_64.exe`](https://github.com/outlawpractice/stripe-tax-reporter/releases/download/v1.0.1/stripe-tax-reporter-windows-x86_64.exe) and run it in PowerShell or Command Prompt.
+**Linux and Windows users:** See Option 2 (Build from Source) or Option 3 (Cargo Install) below.
 
 ### Option 2: Build from Source
 

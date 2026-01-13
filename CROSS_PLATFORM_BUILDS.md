@@ -1,43 +1,38 @@
-# Cross-Platform Builds
+# Cross-Platform Support
 
 ## Overview
 
-Stripe Tax Reporter now includes automated cross-platform builds using GitHub Actions. Pre-built binaries are available for all major platforms and automatically built and attached to each GitHub release.
+Stripe Tax Reporter supports building and running on all major platforms: macOS, Linux, and Windows.
 
-## Supported Platforms
+**Pre-built binaries are available for macOS.** Linux and Windows users can build from source or use `cargo install` (see installation options in README).
 
-| Platform | Architecture | Binary Name | File |
-|----------|--------------|-------------|------|
-| macOS | Intel (x86_64) | stripe-tax-reporter | `stripe-tax-reporter-macos-x86_64` |
-| macOS | Apple Silicon (aarch64) | stripe-tax-reporter | `stripe-tax-reporter-macos-aarch64` |
-| Linux | x86_64 | stripe-tax-reporter | `stripe-tax-reporter-linux-x86_64` |
-| Windows | x86_64 | stripe-tax-reporter.exe | `stripe-tax-reporter-windows-x86_64.exe` |
+## Available Platforms
+
+| Platform | Architecture | Installation Method | Notes |
+|----------|--------------|---------------------|-------|
+| macOS | Intel (x86_64) | Pre-built binary | Download from releases |
+| macOS | Apple Silicon (aarch64) | Pre-built binary | Download from releases |
+| Linux | x86_64 | Build from source or cargo install | Pre-built not available due to OpenSSL cross-compilation complexity |
+| Windows | x86_64 | Build from source or cargo install | Pre-built not available due to compilation complexity |
 
 ## Installation Methods
 
-### 1. Download Pre-built Binary (Recommended)
+### 1. Download Pre-built Binary (macOS only)
 
-Pre-built binaries are available from the [GitHub releases page](https://github.com/outlawpractice/stripe-tax-reporter/releases).
+Pre-built binaries for macOS are available from the [GitHub releases page](https://github.com/outlawpractice/stripe-tax-reporter/releases).
 
 ```bash
 # macOS (Intel)
-curl -L https://github.com/outlawpractice/stripe-tax-reporter/releases/download/v1.0.0/stripe-tax-reporter-macos-x86_64 -o stripe-tax-reporter
+curl -L https://github.com/outlawpractice/stripe-tax-reporter/releases/download/v1.0.1/stripe-tax-reporter-macos-x86_64 -o stripe-tax-reporter
 chmod +x stripe-tax-reporter
+export STRIPE_PROD_API_KEY="sk_live_..."
 ./stripe-tax-reporter
 
 # macOS (Apple Silicon)
-curl -L https://github.com/outlawpractice/stripe-tax-reporter/releases/download/v1.0.0/stripe-tax-reporter-macos-aarch64 -o stripe-tax-reporter
+curl -L https://github.com/outlawpractice/stripe-tax-reporter/releases/download/v1.0.1/stripe-tax-reporter-macos-aarch64 -o stripe-tax-reporter
 chmod +x stripe-tax-reporter
+export STRIPE_PROD_API_KEY="sk_live_..."
 ./stripe-tax-reporter
-
-# Linux
-wget https://github.com/outlawpractice/stripe-tax-reporter/releases/download/v1.0.0/stripe-tax-reporter-linux-x86_64
-chmod +x stripe-tax-reporter-linux-x86_64
-./stripe-tax-reporter-linux-x86_64
-
-# Windows (PowerShell or Command Prompt)
-# Download from GitHub releases page
-stripe-tax-reporter-windows-x86_64.exe
 ```
 
 ### 2. Install with Cargo
@@ -55,41 +50,31 @@ cargo build --release
 ./target/release/stripe-tax-reporter
 ```
 
-## GitHub Actions Workflow
+## Local Build Process
 
-### File Location
-`.github/workflows/release-binaries.yml`
+Binaries are built locally using Rust toolchains, not GitHub Actions (for cost efficiency and simplicity).
 
-### How It Works
+### Build Commands
 
-1. When a new release is published on GitHub, the workflow triggers automatically
-2. Builds are run in parallel on:
-   - macOS-latest (for macOS Intel and Apple Silicon)
-   - Ubuntu-latest (for Linux)
-   - Windows-latest (for Windows)
-3. Each platform compiles a native, optimized release binary
-4. Binaries are automatically uploaded as release assets
+Use the Rust toolchain directly for each platform:
 
-### Workflow Details
+```bash
+# macOS Intel (x86_64)
+cargo build --release --target x86_64-apple-darwin
 
-**Trigger:** GitHub Release published
-**Runners:** macOS, Ubuntu, Windows
-**Actions:**
-- Checkout source code
-- Install Rust toolchain
-- Build with `cargo build --release --target <target>`
-- Upload binary to release using `softprops/action-gh-release`
+# macOS Apple Silicon (aarch64)
+cargo build --release --target aarch64-apple-darwin
 
-### Adding New Platforms
+# Linux (requires OpenSSL dev setup)
+cargo build --release --target x86_64-unknown-linux-gnu
 
-To add support for additional platforms, edit `.github/workflows/release-binaries.yml` and add a new entry to the `matrix.include` array:
-
-```yaml
-- os: ubuntu-latest
-  target: aarch64-unknown-linux-gnu  # New target
-  binary_name: stripe-tax-reporter
-  artifact_name: stripe-tax-reporter-linux-aarch64
+# Windows (requires OpenSSL dev setup)
+cargo build --release --target x86_64-pc-windows-msvc
 ```
+
+### Important: Use Toolchains, Not `cross`
+
+Always use Rust toolchains directly. Do NOT use the `cross` tool, as it adds unnecessary complexity. See CLAUDE.md for more details.
 
 ## Build Optimization
 
